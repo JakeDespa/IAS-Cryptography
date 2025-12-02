@@ -1,5 +1,6 @@
 import random
 import base64
+import hashlib
 
 class CryptoPipeline:
     def __init__(self):
@@ -9,6 +10,10 @@ class CryptoPipeline:
         self.rsa_e = 5
         self.rsa_d = 173
         self.rsa_n = 323 
+
+    # --- HASHING ---
+    def calculate_hash(self, text):
+        return hashlib.sha256(text.encode('utf-8')).hexdigest()
 
     # --- 1. RSA ---
     def apply_rsa(self, text, key_e, key_n):
@@ -23,7 +28,7 @@ class CryptoPipeline:
             return "".join(decrypted)
         except Exception as e:
             print(f"RSA Error: {e}")
-            return text_stream 
+            return text_stream
 
     # --- 2. Monoalphabetic ---
     def apply_mono(self, text, key_map):
@@ -91,13 +96,17 @@ class CryptoPipeline:
 
     # --- PIPELINES ---
     def full_encryption_pipeline(self, plaintext):
-        # 1. Generate Keys
+        # 1. Generate Hash of original text
+        original_hash = self.calculate_hash(plaintext)
+        print(f"Original Hash: {original_hash}")
+
+        # 2. Generate Keys
         mono_key = {chr(i): chr((i + 1) % 256) for i in range(256)}
         # OTP must cover the length of the intermediate data
         otp_key = "".join([chr(random.randint(33, 126)) for _ in range(len(plaintext) * 10)])
         vig_key = "KEYWORD"
         
-        # 2. Apply Layers
+        # 3. Apply Layers
         step1 = self.apply_rsa(plaintext, self.rsa_e, self.rsa_n)
         step2 = self.apply_mono(step1, mono_key)
         step3 = self.apply_transposition(step2)
@@ -117,9 +126,9 @@ class CryptoPipeline:
             "otp": current_otp,
             "vig": vig_key
         }
-        return safe_cipher, keys
+        return safe_cipher, keys, original_hash
 
-    def full_decryption_pipeline(self, safe_ciphertext, keys):
+    def full_decryption_pipeline(self, safe_ciphertext, keys, original_hash):
         # FIXED: Decode from Base64 first
         try:
             raw_ciphertext = base64.b64decode(safe_ciphertext).decode('latin1')
@@ -133,5 +142,13 @@ class CryptoPipeline:
         step4 = self.reverse_transposition(step3)
         step5 = self.reverse_mono(step4, keys["mono"])
         final_text = self.reverse_rsa(step5, keys["rsa_d"], keys["rsa_n"])
+
+        # Validate Hash
+        decrypted_hash = self.calculate_hash(final_text)
+        print(f"Decrypted Hash: {decrypted_hash}")
+        print(f"Original Hash: {original_hash}")
         
+        if decrypted_hash != original_hash:
+            return f"Error: Hash mismatch! Data may be corrupt. Decrypted text: {final_text}"
+
         return final_text

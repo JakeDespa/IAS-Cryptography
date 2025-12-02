@@ -8,7 +8,8 @@ PORT = 5000
 # Storage for the relay (in memory for simplicity)
 stored_data = {
     "ciphertext": None,
-    "keys": None
+    "keys": None,
+    "hash": None
 }
 
 def handle_client(conn, addr):
@@ -23,6 +24,7 @@ def handle_client(conn, addr):
         if request['action'] == 'UPLOAD':
             stored_data['ciphertext'] = request['data']
             stored_data['keys'] = request['keys']
+            stored_data['hash'] = request['hash']
             print(f"[SERVER] Data received and stored from {addr}")
             conn.send("Upload Successful".encode())
             

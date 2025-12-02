@@ -21,13 +21,14 @@ def sender_mode():
     # 2. Apply Pipeline (Flowchart: Upload -> Generate Keys -> Apply Ciphers)
     cp = CryptoPipeline()
     print("Applying: RSA -> Mono -> Transp -> Vernam -> Playfair -> Vigenere...")
-    ciphertext, keys = cp.full_encryption_pipeline(plaintext)
+    ciphertext, keys, original_hash = cp.full_encryption_pipeline(plaintext)
     
     # 3. Send to Server
     payload = {
         "action": "UPLOAD",
         "data": ciphertext,
-        "keys": keys # Sending keys to server to simulate passing them to receiver
+        "keys": keys, # Sending keys to server to simulate passing them to receiver
+        "hash": original_hash
     }
     
     client = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -60,13 +61,14 @@ def receiver_mode():
             
         ciphertext = package['ciphertext']
         keys = package['keys']
+        original_hash = package['hash']
         
         print("File downloaded.")
         
         # 2. Decrypt Pipeline (Flowchart: Reverse RSA... actually Reverse Order)
         cp = CryptoPipeline()
         print("Decrypting layers...")
-        decrypted_text = cp.full_decryption_pipeline(ciphertext, keys)
+        decrypted_text = cp.full_decryption_pipeline(ciphertext, keys, original_hash)
         
         # 3. Save Output
         with open("DecryptedText.txt", "w", encoding='utf-8') as f:
